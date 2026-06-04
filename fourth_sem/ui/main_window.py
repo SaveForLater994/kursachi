@@ -16,6 +16,7 @@ from .intercept_widget import InterceptWidget
 from .history_table import HistoryTable
 from .request_viewer import RequestViewer
 from .repeater_widget import RepeaterWidget
+from .decoder_widget import DecoderWidget  # ← НОВЫЙ ИМПОРТ
 
 from pathlib import Path
 
@@ -107,21 +108,16 @@ class MainWindow(QMainWindow):
         self.tabs = QTabWidget()
         
         # --- Вкладка Proxy ---
-        # Спойлер: Intercept сверху, History снизу
         proxy_splitter = QSplitter(Qt.Orientation.Vertical)
         
-        # Intercept виджет
         self.intercept_widget = InterceptWidget(self.proxy.interceptor)
         proxy_splitter.addWidget(self.intercept_widget)
         
-        # История + просмотрщик
         history_splitter = QSplitter(Qt.Orientation.Horizontal)
         
-        # Таблица истории
         self.history_table = HistoryTable()
         history_splitter.addWidget(self.history_table)
         
-        # Просмотрщик запроса/ответа
         self.request_viewer = RequestViewer()
         history_splitter.addWidget(self.request_viewer)
         
@@ -135,6 +131,10 @@ class MainWindow(QMainWindow):
         # --- Вкладка Repeater ---
         self.repeater_widget = RepeaterWidget()
         self.tabs.addTab(self.repeater_widget, "📤 Repeater")
+        
+        # --- Вкладка Decoder (НОВАЯ) ---
+        self.decoder_widget = DecoderWidget()
+        self.tabs.addTab(self.decoder_widget, "🔧 Decoder")
         
         # --- Вкладка Settings ---
         self.proxy_tab = ProxyTab(self.proxy)
@@ -152,27 +152,18 @@ class MainWindow(QMainWindow):
     def _connect_proxy_handlers(self):
         """Подключает обработчики событий прокси."""
         
-        # Новый запрос → добавляем в таблицу
         self.proxy.interceptor.on_request_captured = self.history_table.add_request
-        
-        # Новый ответ → обновляем таблицу
         self.proxy.interceptor.on_response_received = self.history_table.update_response
         
-        # Клик по строке истории → показываем в просмотрщике
         self.history_table.request_selected.connect(self.request_viewer.show_message)
-        
-        # Двойной клик → открыть в Repeater
         self.history_table.open_in_repeater.connect(self._open_in_repeater)
         
-        # Кнопка "Send to Repeater" в просмотрщике
         self.request_viewer.send_to_repeater_btn.clicked.connect(
             self._send_current_to_repeater
         )
         
-        # Перехват вкл/выкл
         self.proxy_tab.intercept_toggled.connect(self._on_intercept_toggled)
         
-        # Intercept widget
         self.intercept_widget.request_forwarded.connect(self._on_request_forwarded)
         self.intercept_widget.request_dropped.connect(self._on_request_dropped)
     
@@ -287,6 +278,7 @@ class MainWindow(QMainWindow):
             "<li>HTTP/HTTPS прокси-сервер</li>"
             "<li>Перехват и модификация запросов</li>"
             "<li>Repeater для повторной отправки</li>"
+            "<li>Encoder/Decoder (URL, Base64, Hex, HTML)</li>"
             "<li>История всех запросов</li>"
             "</ul>"
         )
